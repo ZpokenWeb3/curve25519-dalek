@@ -21,7 +21,7 @@ mod ed25519_benches {
     use ed25519_dalek::PublicKey;
     use ed25519_dalek::Signature;
     use ed25519_dalek::Signer;
-    use ed25519_dalek::verify_batch;
+    //use ed25519_dalek::verify_batch;
     use rand::thread_rng;
     use rand::prelude::ThreadRng;
 
@@ -68,9 +68,9 @@ mod ed25519_benches {
         });
     }
 
+    #[cfg(feature = "batch")]
     fn verify_batch_signatures(c: &mut Criterion) {
         static BATCH_SIZES: [usize; 8] = [4, 8, 16, 32, 64, 96, 128, 256];
-
         c.bench_function_over_inputs(
             "Ed25519 batch signature verification",
             |b, &&size| {
@@ -86,6 +86,12 @@ mod ed25519_benches {
             &BATCH_SIZES,
         );
     }
+
+
+        // If the above function isn't defined, make a placeholder function
+        #[cfg(not(feature = "batch"))]
+        fn verify_batch_signatures(_: &mut Criterion) {}
+
 
     fn key_generation(c: &mut Criterion) {
         let mut csprng: ThreadRng = thread_rng();

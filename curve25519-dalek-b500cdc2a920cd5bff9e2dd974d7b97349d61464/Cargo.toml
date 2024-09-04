@@ -29,7 +29,7 @@ rustdoc-args = [
     "--html-in-header", "docs/assets/rustdoc-include-katex-header.html",
     "--cfg", "docsrs",
 ]
-features = ["serde", "rand_core", "digest", "legacy_compatibility"]
+features = ["serde", "rand_core", "digest", "legacy_compatibility", "group-bits"]
 
 [badges]
 travis-ci = { repository = "dalek-cryptography/curve25519-dalek", branch = "master"}
@@ -40,6 +40,30 @@ bincode = "1"
 #criterion = { version = "0.3.0", features = ["html_reports"] }
 hex = "0.4.2"
 rand = "0.7"
+
+[build-dependencies]
+platforms = "3.0.2"
+rustc_version = "0.4.0"
+
+[[bench]]
+name = "dalek_benchmarks"
+harness = false
+
+[dependencies]
+group = { version = "0.13", default-features = false, optional = true }
+
+rand_core = { version = "0.5", default-features = false, optional = true}
+byteorder = { version = "^1.2.3", default-features = false, features = ["i128"] }
+digest = { version = "0.9", default-features = false, optional = true}
+subtle = { version = "^2.2.1", default-features = false, optional = true}
+serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
+# The original packed_simd package was orphaned, see
+# https://github.com/rust-lang/packed_simd/issues/303#issuecomment-701361161
+packed_simd = { version = "0.3.4", package = "packed_simd_2", features = ["into_bits"], optional = true }
+zeroize = { version = "1", default-features = false, optional = true}
+fiat-crypto = { version = "0.1.6", optional = true}
+cfg-if = "1"
+
 
 [target.'cfg(target_os = "zkvm")'.dependencies]
 # Use crypto-bigint v0.5.2, which is overridden with a patch for RISC Zero acceleration.
@@ -54,28 +78,6 @@ cpufeatures = "0.2.6"
 [target.'cfg(curve25519_dalek_backend = "fiat")'.dependencies]
 fiat-crypto = { version = "0.2.1", default-features = false }
 
-
-
-[[bench]]
-name = "dalek_benchmarks"
-harness = false
-
-[dependencies]
-rand_core = { version = "0.5", default-features = false }
-byteorder = { version = "^1.2.3", default-features = false, features = ["i128"] }
-digest = { version = "0.9", default-features = false }
-subtle = { version = "^2.2.1", default-features = false }
-serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
-# The original packed_simd package was orphaned, see
-# https://github.com/rust-lang/packed_simd/issues/303#issuecomment-701361161
-packed_simd = { version = "0.3.4", package = "packed_simd_2", features = ["into_bits"], optional = true }
-zeroize = { version = "1", default-features = false }
-fiat-crypto = { version = "0.1.6", optional = true}
-cfg-if = "1"
-
-[build-dependencies]
-platforms = "3.0.2"
-rustc_version = "0.4.0"
 
 [features]
 default = ["alloc", "precomputed-tables", "zeroize"]
@@ -93,11 +95,10 @@ fiat_u64_backend = ["fiat-crypto"]
 # fiat-u32 backend (with formally-verified field arith) uses u32s with u64 products.
 fiat_u32_backend = ["fiat-crypto"]
 # The SIMD backend uses parallel formulas, using either AVX2 or AVX512-IFMA.
-simd_backend = ["nightly", "u64_backend", "packed_simd"]
+#simd_backend = ["nightly", "u64_backend", "packed_simd"]
 # DEPRECATED: this is now an alias for `simd_backend` and may be removed
 # in some future release.
-avx2_backend = ["simd_backend"]
-
+#avx2_backend = ["simd_backend"]
 
 [target.'cfg(all(not(curve25519_dalek_backend = "fiat"), not(curve25519_dalek_backend = "serial"), target_arch = "x86_64"))'.dependencies]
 curve25519-dalek-derive = { version = "0.1", path = "../curve25519-dalek-derive" }

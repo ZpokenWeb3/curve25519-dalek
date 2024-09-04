@@ -16,6 +16,8 @@
 //! scope using a `let` binding:
 //!
 //! ```
+#![cfg_attr(feature = "precomputed-tables", doc = "```")]
+#![cfg_attr(not(feature = "precomputed-tables"), doc = "```ignore")]
 //! use curve25519_dalek::constants;
 //! use curve25519_dalek::traits::IsIdentity;
 //!
@@ -163,13 +165,31 @@ mod test {
         assert_eq!(sign_test_sqrt, minus_one);
     }
 
+
+        /// Test that d = -121665/121666
+        #[test]
+        #[cfg(all(
+            curve25519_dalek_bits = "32",
+            not(curve25519_dalek_backend = "fiat"),
+            not(target_os = "zkvm")
+        ))]
+        fn test_d_vs_ratio() {
+            use crate::backend::serial::u32::field::FieldElement2625;
+            let a = -&FieldElement2625([121665, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let b = FieldElement2625([121666, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let d = &a * &b.invert();
+            let d2 = &d + &d;
+            assert_eq!(d, constants::EDWARDS_D);
+            assert_eq!(d2, constants::EDWARDS_D2);
+        }
+
     /// Test that d = -121665/121666
     #[test]
-    #[cfg(feature = "u32_backend")]
+    #[cfg(all(curve25519_dalek_bits = "64", not(curve25519_dalek_backend = "fiat")))]
     fn test_d_vs_ratio() {
-        use backend::serial::u32::field::FieldElement2625;
-        let a = -&FieldElement2625([121665,0,0,0,0,0,0,0,0,0]);
-        let b =   FieldElement2625([121666,0,0,0,0,0,0,0,0,0]);
+        use crate::backend::serial::u64::field::FieldElement51;
+        let a = -&FieldElement51([121665, 0, 0, 0, 0]);
+        let b = FieldElement51([121666, 0, 0, 0, 0]);
         let d = &a * &b.invert();
         let d2 = &d + &d;
         assert_eq!(d, constants::EDWARDS_D);
@@ -178,11 +198,17 @@ mod test {
 
     /// Test that d = -121665/121666
     #[test]
-    #[cfg(feature = "u64_backend")]
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
     fn test_d_vs_ratio() {
-        use backend::serial::u64::field::FieldElement51;
-        let a = -&FieldElement51([121665,0,0,0,0]);
-        let b =   FieldElement51([121666,0,0,0,0]);
+        use crate::backend::serial::risc0::field::FieldElementR0;
+        use crypto_bigint::U256;
+
+        let a = -&FieldElementR0(U256::from_be_hex(
+            "000000000000000000000000000000000000000000000000000000000001db41",
+        ));
+        let b = FieldElementR0(U256::from_be_hex(
+            "000000000000000000000000000000000000000000000000000000000001db42",
+        ));
         let d = &a * &b.invert();
         let d2 = &d + &d;
         assert_eq!(d, constants::EDWARDS_D);

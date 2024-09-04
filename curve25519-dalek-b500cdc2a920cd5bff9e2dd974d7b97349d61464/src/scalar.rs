@@ -93,13 +93,12 @@
 //! ```
 //! # extern crate curve25519_dalek;
 //! # extern crate sha2;
-//! #
-//! 
-
+#![cfg_attr(feature = "digest", doc = "```")]
+#![cfg_attr(not(feature = "digest"), doc = "```ignore")]
 //! # fn main() {
 //! use sha2::{Digest, Sha512};
 //! use curve25519_dalek::scalar::Scalar;
-
+//!
 //! // Hashing a single byte slice
 //! let a = Scalar::hash_from_bytes::<Sha512>(b"Abolish ICE");
 //!
@@ -151,19 +150,18 @@ use core::ops::{Add, AddAssign};
 use core::ops::{Mul, MulAssign};
 use core::ops::{Sub, SubAssign};
 
+extern crate cfg_if;
+use scalar::cfg_if::cfg_if;
+
 #[allow(unused_imports)]
 use prelude::*;
-
 
 #[cfg(any(test, feature = "rand_core"))]
 use rand_core::{CryptoRng, RngCore};
 
-use digest::generic_array::typenum::U64;
-use digest::Digest;
-
-
 #[cfg(feature = "digest")]
 use digest::generic_array::typenum::U64;
+
 #[cfg(feature = "digest")]
 use digest::Digest;
 
@@ -171,22 +169,12 @@ use subtle::Choice;
 use subtle::ConditionallySelectable;
 use subtle::ConstantTimeEq;
 
-
-#[cfg(feature = "group-bits")]
-use group::ff::{FieldBits, PrimeFieldBits};
-#[cfg(feature = "group")]
-use {
-    group::ff::{Field, FromUniformBytes, PrimeField},
-    rand_core::RngCore,
-};
-
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
-extern crate cfg_if;
-use backend;
 
+
+use backend;
 #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
-use self::cfg_if::cfg_if;
 use constants;
 
 
@@ -300,6 +288,7 @@ impl Scalar {
     /// This function is intended for applications like X25519 which
     /// require specific bit-patterns when performing scalar
     /// multiplication.
+    #[cfg(feature = "legacy_compatibility")]
     pub const fn from_bits(bytes: [u8; 32]) -> Scalar {
         let mut s = Scalar{bytes};
         // Ensure that s < 2^255 by masking the high bit
@@ -420,6 +409,9 @@ impl<'a> Neg for &'a Scalar {
                 UnpackedScalar::sub(&UnpackedScalar::ZERO, &self_mod_l).pack()
             }
         }
+        // let self_R = UnpackedScalar::mul_internal(&self.unpack(), &constants::R);
+        // let self_mod_l = UnpackedScalar::montgomery_reduce(&self_R);
+        // UnpackedScalar::sub(&UnpackedScalar::zero(), &self_mod_l).pack()
     }
 }
 
@@ -446,6 +438,7 @@ use serde::{self, Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::Visitor;
 
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl Serialize for Scalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
@@ -460,6 +453,8 @@ impl Serialize for Scalar {
 }
 
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+
 impl<'de> Deserialize<'de> for Scalar {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
@@ -586,6 +581,7 @@ impl From<u128> for Scalar {
         Scalar{ bytes: s_bytes }
     }
 }
+
 #[cfg(feature = "zeroize")]
 impl Zeroize for Scalar {
     fn zeroize(&mut self) {
@@ -594,6 +590,8 @@ impl Zeroize for Scalar {
 }
 
 impl Scalar {
+
+    #[cfg(any(test, feature = "rand_core"))]
     /// Return a `Scalar` chosen uniformly at random using a user-provided RNG.
     ///
     /// # Inputs
@@ -609,8 +607,7 @@ impl Scalar {
     /// ```
     /// extern crate rand_core;
     /// # extern crate curve25519_dalek;
-    /// #[cfg(any(test, feature = "rand_core"))]
-
+    /// #
     /// # fn main() {
     /// use curve25519_dalek::scalar::Scalar;
     ///
@@ -625,7 +622,6 @@ impl Scalar {
         Scalar::from_bytes_mod_order_wide(&scalar_bytes)
     }
 
-    
     /// Hash a slice of bytes into a scalar.
     ///
     /// Takes a type parameter `D`, which is any `Digest` producing 64
@@ -634,7 +630,7 @@ impl Scalar {
     /// Convenience wrapper around `from_hash`.
     ///
     /// # Example
-    ///
+    #[cfg(feature = "digest")]
     /// ```
     /// # extern crate curve25519_dalek;
     /// # use curve25519_dalek::scalar::Scalar;
@@ -642,6 +638,8 @@ impl Scalar {
     ///
     /// use sha2::Sha512;
     ///
+    #[cfg_attr(feature = "digest", doc = "```")]
+    #[cfg_attr(not(feature = "digest"), doc = "```ignore")]
     /// # // Need fn main() here in comment so the doctest compiles
     /// # // See https://doc.rust-lang.org/book/documentation.html#documentation-as-tests
     /// # fn main() {
@@ -657,6 +655,7 @@ impl Scalar {
         Scalar::from_hash(hash)
     }
 
+    #[cfg(feature = "digest")]
     /// Construct a scalar from an existing `Digest` instance.
     ///
     /// Use this instead of `hash_from_bytes` if it is more convenient
@@ -691,6 +690,7 @@ impl Scalar {
     ///                                 239,  48, 176,  10, 185,  69, 168,  11, ]));
     /// # }
     /// ```
+    #[cfg(feature = "digest")]
     pub fn from_hash<D>(hash: D) -> Scalar
         where D: Digest<OutputSize = U64>
     {
@@ -872,6 +872,7 @@ impl Scalar {
             *input = UnpackedScalar::montgomery_mul(&acc, &scratch).pack();
             acc = tmp;
         }
+        #[cfg(feature = "zeroize")]
 
         ret
     }
@@ -1053,6 +1054,7 @@ impl Scalar {
 
     /// Returns a size hint indicating how many entries of the return
     /// value of `to_radix_2w` are nonzero.
+    #[cfg(any(feature = "alloc", all(test, feature = "precomputed-tables")))]
     pub(crate) fn to_radix_2w_size_hint(w: usize) -> usize {
         debug_assert!(w >= 4);
         debug_assert!(w <= 8);
@@ -1088,6 +1090,7 @@ impl Scalar {
     /// $$
     /// with \\(-2\^w/2 \leq a_i < 2\^w/2\\) for \\(0 \leq i < (n-1)\\) and \\(-2\^w/2 \leq a_{n-1} \leq 2\^w/2\\).
     ///
+    #[cfg(any(feature = "alloc", feature = "precomputed-tables"))]
     pub(crate) fn to_radix_2w(&self, w: usize) -> [i8; 64] {
         debug_assert!(w >= 4);
         debug_assert!(w <= 8);
@@ -1158,7 +1161,7 @@ impl Scalar {
     #[allow(non_snake_case)]
     pub fn reduce(&self) -> Scalar {
         let x = self.unpack();
-        
+
         cfg_if! {
             if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
                 let x_mod_l = UnpackedScalar::reduce(&x);
@@ -1167,6 +1170,8 @@ impl Scalar {
                 let x_mod_l = UnpackedScalar::montgomery_reduce(&xR);
             }
         }
+        // let xR = UnpackedScalar::mul_internal(&x, &constants::R);
+        // let x_mod_l = UnpackedScalar::montgomery_reduce(&xR);
         x_mod_l.pack()
     }
 
@@ -1262,12 +1267,10 @@ impl UnpackedScalar {
 }
 
 #[cfg(test)]
-pub (crate) mod test {
+mod test {
     use super::*;
-    #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
     use constants;
-    #[cfg(feature = "alloc")]
-	
+
     /// x = 2238329342913194256032495932344128051776374960164957527413114840482143558222
     pub static X: Scalar = Scalar{
         bytes: [
@@ -1697,21 +1700,12 @@ pub (crate) mod test {
         // The reduced scalar should match the expected
         assert_eq!(reduced.bytes, expected.bytes);
 
-        // //  (x + 2^256x) * R
-        // let interim = UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum),
-        //                                            &constants::R);
-        // // ((x + 2^256x) * R) / R  (mod l)
-        // let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
-        cfg_if! {
-            if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-                let montgomery_reduced = UnpackedScalar::reduce(&UnpackedScalar::from_bytes_wide(&bignum));
-            } else {
-                let interim =
-                    UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum), &constants::R);
-                // ((x + 2^256x) * R) / R  (mod l)
-                let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
-            }
-        }
+        //  (x + 2^256x) * R
+        let interim = UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum),
+                                                   &constants::R);
+        // ((x + 2^256x) * R) / R  (mod l)
+        let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
+
         // The Montgomery reduced scalar should match the reduced one, as well as the expected
         assert_eq!(montgomery_reduced.0, reduced.unpack().0);
         assert_eq!(montgomery_reduced.0, expected.unpack().0)

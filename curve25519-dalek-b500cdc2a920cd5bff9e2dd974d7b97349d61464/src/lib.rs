@@ -10,15 +10,25 @@
 // - Henry de Valence <hdevalence@hdevalence.ca>
 
 #![no_std]
-#![cfg_attr(feature = "nightly", feature(test))]
-#![cfg_attr(feature = "nightly", feature(doc_cfg))]
-#![cfg_attr(feature = "simd_backend", feature(stdsimd))]
+#![cfg_attr(all(curve25519_dalek_backend = "simd", nightly), feature(stdsimd))]
+#![cfg_attr(
+    all(curve25519_dalek_backend = "simd", nightly),
+    feature(avx512_target_feature)
+)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg, doc_cfg_hide))]
+#![cfg_attr(docsrs, doc(cfg_hide(docsrs)))]
+
+#![doc(
+    html_logo_url = "https://cdn.jsdelivr.net/gh/dalek-cryptography/curve25519-dalek/docs/assets/dalek-logo-clear.png"
+)]
+#![doc = include_str!("../README.md")]
 
 // Refuse to compile if documentation is missing.
 #![deny(missing_docs)]
 
 #![doc(html_logo_url = "https://doc.dalek.rs/assets/dalek-logo-clear.png")]
 #![doc(html_root_url = "https://docs.rs/curve25519-dalek/3.2.1")]
+
 
 //! # curve25519-dalek [![](https://img.shields.io/crates/v/curve25519-dalek.svg)](https://crates.io/crates/curve25519-dalek) [![](https://img.shields.io/badge/dynamic/json.svg?label=docs&uri=https%3A%2F%2Fcrates.io%2Fapi%2Fv1%2Fcrates%2Fcurve25519-dalek%2Fversions&query=%24.versions%5B0%5D.num&colorB=4F74A6)](https://doc.dalek.rs) [![](https://travis-ci.org/dalek-cryptography/curve25519-dalek.svg?branch=master)](https://travis-ci.org/dalek-cryptography/curve25519-dalek)
 //!
@@ -262,8 +272,15 @@ extern crate std;
 extern crate packed_simd;
 
 extern crate byteorder;
+
+
+#[cfg(feature = "digest")]
 pub extern crate digest;
-extern crate rand_core;
+
+
+//extern crate rand_core;
+
+
 extern crate zeroize;
 
 #[cfg(any(feature = "fiat_u64_backend", feature = "fiat_u32_backend"))]
@@ -274,6 +291,8 @@ extern crate subtle;
 
 #[cfg(all(test, feature = "serde"))]
 extern crate bincode;
+
+
 #[cfg(feature = "serde")]
 extern crate serde;
 

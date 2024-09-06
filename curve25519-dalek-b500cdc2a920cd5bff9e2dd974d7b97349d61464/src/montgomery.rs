@@ -355,8 +355,8 @@ mod test {
     use super::*;
     use constants;
     use core::convert::TryInto;
-
-    use rand_core::OsRng;
+    extern crate rand_core;
+    use self::rand_core::OsRng;
 
     #[test]
     fn identity_in_different_coordinates() {

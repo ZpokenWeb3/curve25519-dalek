@@ -165,10 +165,12 @@ use core::ops::{Add, Neg, Sub};
 use core::ops::{AddAssign, SubAssign};
 use core::ops::{Mul, MulAssign};
 
-use rand_core::{CryptoRng, RngCore};
+extern crate rand;
+use self::rand::{CryptoRng, RngCore};
 
-use digest::generic_array::typenum::U64;
-use digest::Digest;
+extern crate digest;
+use self::digest::generic_array::typenum::U64;
+use self::digest::Digest;
 
 use constants;
 use field::FieldElement;
@@ -1103,7 +1105,8 @@ impl Zeroize for RistrettoPoint {
 
 #[cfg(test)]
 mod test {
-    use rand_core::OsRng;
+    extern crate rand_core;
+    use self::rand_core::OsRng;
 
     use scalar::Scalar;
     use constants;

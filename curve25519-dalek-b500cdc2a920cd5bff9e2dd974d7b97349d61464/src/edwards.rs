@@ -101,7 +101,10 @@ use core::ops::{Add, Neg, Sub};
 use core::ops::{AddAssign, SubAssign};
 use core::ops::{Mul, MulAssign};
 
-use digest::{generic_array::typenum::U64, Digest};
+extern crate digest;
+
+use self::digest::{generic_array::typenum::U64, Digest};
+
 use subtle::Choice;
 use subtle::ConditionallyNegatable;
 use subtle::ConditionallySelectable;

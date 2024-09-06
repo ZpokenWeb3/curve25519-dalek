@@ -34,8 +34,10 @@
 //! `Some(Scalar)` in return:
 //!
 //! ```
+//! 
+//! 
 //! use curve25519_dalek::scalar::Scalar;
-//!
+//! extern crate rand_core;
 //! let one_as_bytes: [u8; 32] = Scalar::one().to_bytes();
 //! let a: Option<Scalar> = Scalar::from_canonical_bytes(one_as_bytes);
 //!
@@ -91,8 +93,11 @@
 //! which allows an IUF API.
 //!
 //! ```
+//! # extern crate rand_core;
 //! # extern crate curve25519_dalek;
 //! # extern crate sha2;
+//! use scalar::rand_core::RngCore;
+//! use scalar::rand_core::CryptoRng;
 #![cfg_attr(feature = "digest", doc = "```")]
 #![cfg_attr(not(feature = "digest"), doc = "```ignore")]
 //! # fn main() {
@@ -150,14 +155,19 @@ use core::ops::{Add, AddAssign};
 use core::ops::{Mul, MulAssign};
 use core::ops::{Sub, SubAssign};
 
+
+
 extern crate cfg_if;
 use scalar::cfg_if::cfg_if;
 
 #[allow(unused_imports)]
 use prelude::*;
 
+
+
 #[cfg(any(test, feature = "rand_core"))]
-use rand_core::{CryptoRng, RngCore};
+extern crate rand_core;
+
 
 #[cfg(feature = "digest")]
 use digest::generic_array::typenum::U64;
@@ -274,7 +284,7 @@ impl Scalar {
     pub fn from_canonical_bytes(bytes: [u8; 32]) -> Option<Scalar> {
         // Check that the high bit is not set
         if (bytes[31] >> 7) != 0u8 { return None; }
-        let candidate = Scalar::from_bits(bytes);
+        let candidate = Scalar{bytes};
 
         if candidate.is_canonical() {
             Some(candidate)
@@ -406,7 +416,7 @@ impl<'a> Neg for &'a Scalar {
             } else {
                 let self_R = UnpackedScalar::mul_internal(&self.unpack(), &constants::R);
                 let self_mod_l = UnpackedScalar::montgomery_reduce(&self_R);
-                UnpackedScalar::sub(&UnpackedScalar::ZERO, &self_mod_l).pack()
+                UnpackedScalar::sub(&UnpackedScalar::zero(), &self_mod_l).pack()
             }
         }
         // let self_R = UnpackedScalar::mul_internal(&self.unpack(), &constants::R);
@@ -605,17 +615,19 @@ impl Scalar {
     /// # Example
     ///
     /// ```
-    /// extern crate rand_core;
+    /// 
     /// # extern crate curve25519_dalek;
     /// #
     /// # fn main() {
     /// use curve25519_dalek::scalar::Scalar;
     ///
     /// use rand_core::OsRng;
-    ///
+    /// 
+    /// 
     /// let mut csprng = OsRng;
     /// let a: Scalar = Scalar::random(&mut csprng);
     /// # }
+    
     pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
         let mut scalar_bytes = [0u8; 64];
         rng.fill_bytes(&mut scalar_bytes);
@@ -1269,7 +1281,11 @@ impl UnpackedScalar {
 #[cfg(test)]
 mod test {
     use super::*;
-    use constants;
+
+    #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
+    use crate::constants;
+    #[cfg(feature = "alloc")]
+    use alloc::vec::Vec;
 
     /// x = 2238329342913194256032495932344128051776374960164957527413114840482143558222
     pub static X: Scalar = Scalar{
@@ -1701,10 +1717,21 @@ mod test {
         assert_eq!(reduced.bytes, expected.bytes);
 
         //  (x + 2^256x) * R
-        let interim = UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum),
-                                                   &constants::R);
-        // ((x + 2^256x) * R) / R  (mod l)
-        let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
+        // let interim = UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum),
+        //                                            &constants::R);
+        // // ((x + 2^256x) * R) / R  (mod l)
+        // let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
+
+        cfg_if! {
+            if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
+                let montgomery_reduced = UnpackedScalar::reduce(&UnpackedScalar::from_bytes_wide(&bignum));
+            } else {
+                let interim =
+                    UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum), &constants::R);
+                // ((x + 2^256x) * R) / R  (mod l)
+                let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
+            }
+        }
 
         // The Montgomery reduced scalar should match the reduced one, as well as the expected
         assert_eq!(montgomery_reduced.0, reduced.unpack().0);

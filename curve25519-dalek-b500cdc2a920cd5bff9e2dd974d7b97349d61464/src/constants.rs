@@ -110,7 +110,7 @@ use crate::ristretto::RistrettoBasepointTable;
 pub static RISTRETTO_BASEPOINT_TABLE: &RistrettoBasepointTable = unsafe {
     // SAFETY: `RistrettoBasepointTable` is a `#[repr(transparent)]` newtype of
     // `EdwardsBasepointTable`
-    &*(ED25519_BASEPOINT_TABLE as *const EdwardsBasepointTable as *const RistrettoBasepointTable)
+    &*(&ED25519_BASEPOINT_TABLE as *const EdwardsBasepointTable as *const RistrettoBasepointTable)
 };
 
 

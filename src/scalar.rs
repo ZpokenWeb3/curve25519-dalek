@@ -124,9 +124,9 @@ use cfg_if::cfg_if;
 
 #[cfg(feature = "group")]
 use group::ff::{Field, FromUniformBytes, PrimeField};
-
 #[cfg(feature = "group-bits")]
 use group::ff::{FieldBits, PrimeFieldBits};
+
 #[cfg(any(test, feature = "group"))]
 use rand_core::RngCore;
 
@@ -147,7 +147,6 @@ use subtle::CtOption;
 use zeroize::Zeroize;
 
 use crate::backend;
-#[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
 use crate::constants;
 
 cfg_if! {
@@ -180,12 +179,6 @@ cfg_if! {
         /// module.
         #[cfg_attr(docsrs, doc(cfg(curve25519_dalek_bits = "64")))]
         type UnpackedScalar = backend::serial::u64::scalar::Scalar52;
-    } else if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-        /// An `UnpackedScalar` represents an element of the field GF(l), optimized for speed.
-        ///
-        /// This is a type alias for one of the scalar types in the `backend`
-        /// module.
-        type UnpackedScalar = backend::serial::risc0::scalar::ScalarR0;
     } else {
         /// An `UnpackedScalar` represents an element of the field GF(l), optimized for speed.
         ///
@@ -292,7 +285,7 @@ impl Scalar {
 }
 
 impl Debug for Scalar {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Scalar{{\n\tbytes: {:?},\n}}", &self.bytes)
     }
 }
@@ -380,15 +373,9 @@ impl<'a> Neg for &'a Scalar {
     type Output = Scalar;
     #[allow(non_snake_case)]
     fn neg(self) -> Scalar {
-        cfg_if! {
-            if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-                UnpackedScalar::negate(&self.unpack()).pack()
-            } else {
-                let self_R = UnpackedScalar::mul_internal(&self.unpack(), &constants::R);
-                let self_mod_l = UnpackedScalar::montgomery_reduce(&self_R);
-                UnpackedScalar::sub(&UnpackedScalar::ZERO, &self_mod_l).pack()
-            }
-        }
+        let self_R = UnpackedScalar::mul_internal(&self.unpack(), &constants::R);
+        let self_mod_l = UnpackedScalar::montgomery_reduce(&self_R);
+        UnpackedScalar::sub(&UnpackedScalar::ZERO, &self_mod_l).pack()
     }
 }
 
@@ -443,7 +430,7 @@ impl<'de> Deserialize<'de> for Scalar {
         impl<'de> Visitor<'de> for ScalarVisitor {
             type Value = Scalar;
 
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+            fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 formatter.write_str(
                     "a sequence of 32 bytes whose little-endian interpretation is less than the \
                     basepoint order ℓ",
@@ -844,7 +831,7 @@ impl Scalar {
         }
 
         #[cfg(feature = "zeroize")]
-        zeroize::Zeroize::zeroize(&mut scratch);
+        Zeroize::zeroize(&mut scratch);
 
         ret
     }
@@ -1137,16 +1124,8 @@ impl Scalar {
     #[allow(non_snake_case)]
     fn reduce(&self) -> Scalar {
         let x = self.unpack();
-
-        cfg_if! {
-            if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-                let x_mod_l = UnpackedScalar::reduce(&x);
-            } else {
-                let xR = UnpackedScalar::mul_internal(&x, &constants::R);
-                let x_mod_l = UnpackedScalar::montgomery_reduce(&xR);
-            }
-        }
-
+        let xR = UnpackedScalar::mul_internal(&x, &constants::R);
+        let x_mod_l = UnpackedScalar::montgomery_reduce(&xR);
         x_mod_l.pack()
     }
 
@@ -1412,7 +1391,6 @@ pub const fn clamp_integer(mut bytes: [u8; 32]) -> [u8; 32] {
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
-    #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
 
     #[cfg(feature = "alloc")]
     use alloc::vec::Vec;
@@ -1780,16 +1758,10 @@ pub(crate) mod test {
         assert_eq!(reduced.bytes, expected.bytes);
 
         //  (x + 2^256x) * R
-        cfg_if! {
-            if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-                let montgomery_reduced = UnpackedScalar::reduce(&UnpackedScalar::from_bytes_wide(&bignum));
-            } else {
-                let interim =
-                    UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum), &constants::R);
-                // ((x + 2^256x) * R) / R  (mod l)
-                let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
-            }
-        }
+        let interim =
+            UnpackedScalar::mul_internal(&UnpackedScalar::from_bytes_wide(&bignum), &constants::R);
+        // ((x + 2^256x) * R) / R  (mod l)
+        let montgomery_reduced = UnpackedScalar::montgomery_reduce(&interim);
 
         // The Montgomery reduced scalar should match the reduced one, as well as the expected
         assert_eq!(montgomery_reduced.0, reduced.unpack().0);

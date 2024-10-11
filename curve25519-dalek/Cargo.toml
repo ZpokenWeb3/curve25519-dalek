@@ -55,6 +55,10 @@ subtle = { version = "2.3.0", default-features = false }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
 zeroize = { version = "1", default-features = false, optional = true }
 
+[target.'cfg(target_os = "zkvm")'.dependencies]
+# Use crypto-bigint v0.5.5, which is overridden with a patch for RISC Zero acceleration.
+crypto-bigint = { version = "=0.5.5", default-features = false, features = ["zeroize"] }
+
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 cpufeatures = "0.2.6"
 

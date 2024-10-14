@@ -110,9 +110,11 @@ use digest::{generic_array::typenum::U64, Digest};
 #[cfg(feature = "group")]
 use {
     group::{cofactor::CofactorGroup, prime::PrimeGroup, GroupEncoding},
-    rand_core::RngCore,
     subtle::CtOption,
 };
+
+#[cfg(feature = "group")]
+use rand_core::RngCore;
 
 use subtle::Choice;
 use subtle::ConditionallyNegatable;
@@ -258,7 +260,7 @@ impl TryFrom<&[u8]> for CompressedEdwardsY {
 #[cfg(feature = "serde")]
 use serde::de::Visitor;
 #[cfg(feature = "serde")]
-use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[cfg(feature = "serde")]
 impl Serialize for EdwardsPoint {
@@ -1600,6 +1602,8 @@ mod test {
     #[cfg(feature = "precomputed-tables")]
     use crate::constants::ED25519_BASEPOINT_TABLE;
 
+    // If `group` is set, then this is already imported in super
+    #[cfg(not(feature = "group"))]
     use rand_core::RngCore;
 
     /// X coordinate of the basepoint.

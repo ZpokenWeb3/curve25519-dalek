@@ -31,8 +31,7 @@ This crate is `#[no_std]` compatible with `default-features = false`.
 
 # Major Changes
 
-See [CHANGELOG.md](CHANGELOG.md) for a list of changes made in past version of this crate.
-
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes made in past versions of this crate.
 ## Breaking Changes in 2.0.0
 
 * Bump MSRV from 1.41 to 1.60.0

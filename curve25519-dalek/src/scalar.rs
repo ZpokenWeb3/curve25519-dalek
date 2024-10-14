@@ -127,13 +127,11 @@ use cfg_if::cfg_if;
 #[cfg(feature = "group-bits")]
 use group::ff::{FieldBits, PrimeFieldBits};
 #[cfg(feature = "group")]
-use {
-    group::ff::{Field, FromUniformBytes, PrimeField},
-    rand_core::RngCore,
-};
-
+use group::ff::{Field, FromUniformBytes, PrimeField};
 #[cfg(any(test, feature = "rand_core"))]
 use rand_core::CryptoRngCore;
+#[cfg(any(test, feature = "group"))]
+use rand_core::RngCore;
 
 #[cfg(feature = "digest")]
 use digest::generic_array::typenum::U64;
@@ -415,7 +413,7 @@ impl ConditionallySelectable for Scalar {
 #[cfg(feature = "serde")]
 use serde::de::Visitor;
 #[cfg(feature = "serde")]
-use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -1419,8 +1417,6 @@ pub(crate) mod test {
 
     #[cfg(feature = "alloc")]
     use alloc::vec::Vec;
-
-    use rand::RngCore;
 
     /// x = 2238329342913194256032495932344128051776374960164957527413114840482143558222
     pub static X: Scalar = Scalar {

@@ -23,9 +23,6 @@ where
     a - b
 }
 
-#[unsafe_target_feature("sse2")]
-#[cfg(feature = "dummy")]
-fn function_with_cfg() {}
 
 #[unsafe_target_feature("sse2")]
 #[rustfmt::skip]
@@ -93,7 +90,7 @@ mod inner {
     }
 }
 
-#[unsafe_target_feature_specialize("sse2", "avx2", conditional("avx512ifma", disabled))]
+#[unsafe_target_feature_specialize("sse2", "avx2")]
 mod inner_spec {
     #[for_target_feature("sse2")]
     const CONST: u32 = 1;

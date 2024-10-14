@@ -104,17 +104,6 @@ mod deterministic {
             }
         };
 
-        // // platforms crate is the source of truth used to determine the platform
-        // let platform = match platforms::Platform::find(&target_triplet) {
-        //     Some(p) => p,
-        //     None => {
-        //         if target_triplet != "riscv32im-risc0-zkvm-elf" {
-        //             determine_curve25519_dalek_bits_warning(ERR_MSG_NO_PLATFORM);
-        //         }
-        //         return DalekBits::Dalek32;
-        //     }
-        // };
-
         match &target_arch {
             //Issues: 449 and 456
             //TODO: When adding arch defaults use proper types not String match
